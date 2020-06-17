@@ -1,5 +1,5 @@
 import json
-from pre_cfg import API_ID, API_HASH, TOKEN
+from pre_cfg import *
 from os.path import exists
 
 if not exists('config.json'):
@@ -8,7 +8,8 @@ if not exists('config.json'):
             'API_ID': API_ID,
             'API_HASH': API_HASH,
             'OWNER_ID': None,
-            'TOKEN': TOKEN
+            'TOKEN': TOKEN,
+            'SECRET_KEY': SECRET_KEY
         }
         json.dump(data, f)
 
@@ -23,7 +24,7 @@ def set_config(key: str, value) -> None:
     with open('config.json', 'r') as f:
         data = json.load(f)
 
-    if key not in data.keys():
+    if key not in data.keys() or key == 'SECRET_KEY':
         raise KeyError('Недопустимый ключ')
     else:
         data['key'] = value
