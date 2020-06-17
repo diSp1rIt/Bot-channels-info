@@ -1,2 +1,4 @@
 config.json
 *.session
+pre_cfg.py
+/.idea/
