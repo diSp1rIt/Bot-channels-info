@@ -14,6 +14,8 @@ phone = ''
 code_require = False
 code = 0
 
+bot.send_message(455713776, 'Бот запущен')
+
 
 @dp.message_handler(commands=['start'])
 async def start_handle(msg: types.Message):
