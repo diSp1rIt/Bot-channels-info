@@ -9,10 +9,10 @@ client = TelegramClient('bot', API_ID, API_HASH)
 
 
 @async_call
-def send_code(phone: str):
-    client.send_code_request(phone)
+async def send_code(phone: str):
+    await client.send_code_request(phone)
 
 
 @async_call
-def sing_in(phone: str, code: int):
-    client.sign_in(phone, code)
+async def sing_in(phone: str, code: int):
+    await client.sign_in(phone, code)
