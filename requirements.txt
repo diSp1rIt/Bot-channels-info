@@ -1,0 +1,4 @@
+aiogram
+telethon
+json
+os
