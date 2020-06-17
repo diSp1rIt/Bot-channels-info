@@ -13,13 +13,13 @@ if not exists('config.json'):
         json.dump(data, f)
 
 
-def get_data() -> dict:
+def load_configs() -> dict:
     with open('config.json', 'r') as f:
         data = json.load(f)
     return data
 
 
-def set_data(key: str, value) -> None:
+def set_config(key: str, value) -> None:
     with open('config.json', 'r') as f:
         data = json.load(f)
 
