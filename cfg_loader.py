@@ -1,5 +1,5 @@
 import json
-from pre_cfg import API_ID, API_HASH
+from pre_cfg import API_ID, API_HASH, TOKEN
 from os.path import exists
 
 if not exists('config.json'):
@@ -7,21 +7,26 @@ if not exists('config.json'):
         data = {
             'API_ID': API_ID,
             'API_HASH': API_HASH,
-            'OWNER_ID': None
+            'OWNER_ID': None,
+            'TOKEN': TOKEN
         }
         json.dump(data, f)
 
 
-def get_data() -> tuple:
-    data = dict()
+def get_data() -> dict:
     with open('config.json', 'r') as f:
-        nonlocal data
         data = json.load(f)
-    return data["API_ID"], data["API_HASH"], data["OWNER_ID"]
+    return data
 
 
-def set_data(key: str, value):
-    data = dict()
+def set_data(key: str, value) -> None:
     with open('config.json', 'r') as f:
-        nonlocal data
         data = json.load(f)
+
+    if key not in data.keys():
+        raise KeyError('Недопустимый ключ')
+    else:
+        data['key'] = value
+
+    with open('config.json', 'w') as f:
+        json.dump(data, f)
