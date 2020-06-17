@@ -27,7 +27,7 @@ def set_config(key: str, value) -> None:
     if key not in data.keys() or key == 'SECRET_KEY':
         raise KeyError('Недопустимый ключ')
     else:
-        data['key'] = value
+        data[key] = value
 
     with open('config.json', 'w') as f:
         json.dump(data, f)
