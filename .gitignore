@@ -1,4 +1,6 @@
 config.json
 *.session
+*.session-journal
+*.db
 pre_cfg.py
 /.idea/
