@@ -68,7 +68,7 @@ async def messages_dump(client, analyze_list):
                     new_post = Post()
                     new_post.message_id = msg.id
                     new_post.channel_id = msg.to_id.channel_id
-                    new_post.message = msg.message
+                    new_post.message = msg.message.lower()
                     new_post.views = msg.views
                     db_ses.add(new_post)
     db_ses.commit()
