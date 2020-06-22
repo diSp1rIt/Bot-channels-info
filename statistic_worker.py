@@ -70,3 +70,20 @@ async def messages_dump(client, analyze_list):
                     new_post.views = msg.views
                     db_ses.add(new_post)
     db_ses.commit()
+
+
+async def find_messages_by_word(word: str, channel_id=None):
+    word = word.lower()
+    if channel_id is None:
+        result = db_ses.query(Post).filter(Post.message.like(f'%{word}%')).all()
+    else:
+        if type(channel_id) is int or str(channel_id).isdigit():
+            channel_id = int(channel_id)
+            result = db_ses.query(Post).filter(Post.message.like(f'%{word}%')).filter(
+                Post.channel_id == channel_id).all()
+        else:
+            return 'Didn\'t find'
+    answer = dict()
+    for post in result:
+        answer[post.channel_id] = [post.message_id, post.message.count(word)]
+    return answer
