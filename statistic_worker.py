@@ -71,4 +71,4 @@ async def messages_dump(client, analyze_list):
                     new_post.message = msg.message
                     new_post.views = msg.views
                     db_ses.add(new_post)
-                    db_ses.commit()
+    db_ses.commit()
