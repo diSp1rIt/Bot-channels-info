@@ -3,7 +3,6 @@ from cfg_loader import *
 import registration
 from handle_phone_number import check_phone_number
 from telethon.tl.functions.channels import GetFullChannelRequest
-from telethon import types as telethon_types
 from statistic_worker import *
 
 
@@ -34,7 +33,13 @@ async def msg_error_handler(msg: types.Message, flag_name: str, list_type=None) 
         exec(flag_name + ' = False')
         return 1
 
-    if msg.text not in [el.title for el in list_type]:
+    try:
+        id = int(msg.text.split('(')[1].strip(')'))
+    except Exception:
+        await msg.answer('Ошибка формата.\nИспользуйте кнопки')
+        return 1
+
+    if id not in [el.id for el in list_type]:
         await msg.answer('Канал не найден')
         return 1
 
@@ -44,7 +49,7 @@ async def msg_error_handler(msg: types.Message, flag_name: str, list_type=None) 
 async def get_channel_info_from_msg(msg: types.Message):
     global analyzing_channels_list
 
-    index = [el.title for el in analyzing_channels_list].index(msg.text)
+    index = [el.id for el in analyzing_channels_list].index(int(msg.text.split('(')[1].strip(')')))
     channel = analyzing_channels_list[index]
     result = await client(GetFullChannelRequest(channel.id))
 
@@ -56,8 +61,12 @@ async def update_data():
     global client
     analyzing_channels_list = await load_channels(client)
     if analyzing_channels_list:
-        await bot.send_message(configs['OWNER_ID'], 'Начинаю обновление данных о постах...')
+        await bot.send_message(configs['OWNER_ID'], 'Начинаю обновление данных о постах...\nПожалуйста подождите⏰')
         await messages_dump(client, analyzing_channels_list)
+        for channel in analyzing_channels_list:
+            await delete_data(channel.id, delete_from_channels=True)
+            res = await client(GetFullChannelRequest(channel.id))
+            await do_record(res)
         await bot.send_message(configs['OWNER_ID'], 'Обновление закончено')
 # ------------------------------
 
@@ -187,7 +196,7 @@ async def channel_handle(msg: types.Message):
     for channel in channels_list:
         if channel.id not in [elem.id for elem in analyzing_channels_list]:
             temp_list.append(channel)
-    items.extend([types.KeyboardButton(elem.title) for elem in temp_list])
+    items.extend([types.KeyboardButton(elem.title + f'\n({elem.id})') for elem in temp_list])
     markup.add(*items)
     channel_name_require = True
     await msg.answer('Выберете канал', reply_markup=markup)
@@ -214,7 +223,7 @@ async def remove_from_analyze_handle(msg: types.Message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     items = [types.KeyboardButton('/cancel')]
     temp_list = analyzing_channels_list
-    items.extend([types.KeyboardButton(elem.title) for elem in temp_list])
+    items.extend([types.KeyboardButton(elem.title + f'\n({elem.id})') for elem in temp_list])
     markup.add(*items)
     channel_name_for_delete_require = True
     await msg.answer('Выберете канал', reply_markup=markup)
@@ -265,7 +274,7 @@ async def get_info_handle(msg: types.Message):
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         items = [types.KeyboardButton('/cancel')]
         items.extend(
-            [types.KeyboardButton(f'{channel.title}') for channel in analyzing_channels_list])
+            [types.KeyboardButton(channel.title + f'\n({channel.id})') for channel in analyzing_channels_list])
         markup.add(*items)
         await msg.answer('Выберете канал для получения информации', reply_markup=markup)
         channel_name_for_analyze_require = True
@@ -293,7 +302,7 @@ async def get_posts_handle(msg: types.Message):
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
         items = [types.KeyboardButton('/cancel')]
         items.extend(
-            [types.KeyboardButton(f'{channel.title}') for channel in analyzing_channels_list])
+            [types.KeyboardButton(channel.title + f'\n({channel.id})') for channel in analyzing_channels_list])
         markup.add(*items)
         await msg.answer('Выберете канал для получения постов', reply_markup=markup)
         channel_name_for_get_posts_require = True
@@ -365,15 +374,22 @@ async def text_handle(msg: types.Message):
                     if res:
                         return
 
-                    if msg.text in [el.title for el in analyzing_channels_list]:
-                        await msg.answer('Канал уже анализируется')
+                    try:
+                        id = int(msg.text.split('(')[1].strip(')'))
+                    except Exception:
+                        await msg.answer('Ошибка формата.\nИспользуйте кнопки')
+                        return
 
-                    index = [el.title for el in channels_list].index(msg.text)
+                    if id in [el.id for el in analyzing_channels_list]:
+                        await msg.answer('Канал уже анализируется')
+                        return
+
+                    index = [el.id for el in channels_list].index(id)
                     analyzing_channels_list.append(channels_list[index])
                     result = await client(GetFullChannelRequest(channels_list[index].id))
 
-                    do_record(result)
-                    await msg.answer(f'Добавлен канал: {msg.text}',
+                    await do_record(result)
+                    await msg.answer(f'Добавлен канал: {msg.text.split("(")[0]}',
                                      reply_markup=types.ReplyKeyboardRemove())
                     channel_name_require = False
                 elif channel_name_for_analyze_require:
@@ -416,7 +432,9 @@ async def text_handle(msg: types.Message):
                     if msg.text.lower() == 'да':
                         await msg.answer(f'Начинаю удаление канала (id={channel_id_for_delete})',
                                          reply_markup=types.ReplyKeyboardRemove())
-                        # Здесь происходит удаление всех данных из БД
+                        await delete_data(channel_id_for_delete, True, True)
+                        index = [el.id for el in analyzing_channels_list].index(channel_id_for_delete)
+                        del analyzing_channels_list[index]
                         await msg.answer(f'Данные удалены')
                     else:
                         await msg.answer('Отмена', reply_markup=types.ReplyKeyboardRemove())
