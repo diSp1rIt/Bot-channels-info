@@ -33,7 +33,6 @@ def get_current_info(channel):
 
 
 def do_record(channel):
-    print(channel.stringify())
     new_channel = Channel()
     for i in range(len(data_list)):
         if 'full_chat' in data_list[i]:
@@ -54,7 +53,6 @@ async def load_channels(client):
         if dialog.is_channel:
             dialog = dialog.entity
             if dialog.id in [elem.id for elem in db_res]:
-                print('added')
                 analyze_list.append(dialog)
     return analyze_list
 
