@@ -1,4 +1,4 @@
-config.json
+*.json
 *.session
 *.session-journal
 *.db

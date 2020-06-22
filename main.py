@@ -3,8 +3,14 @@ from cfg_loader import *
 import registration
 from handle_phone_number import check_phone_number
 from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon import types as telethon_types
+from statistic_worker import *
 
+
+# ------ Init ------
 configs = load_configs()
+# ------------------
+
 
 # ------ Global variables ------
 bot = Bot(token=configs['TOKEN'])
@@ -12,14 +18,70 @@ dp = Dispatcher(bot)
 client = registration.get_client()
 channels_list = []
 analyzing_channels_list = []
+channel_id_for_delete = 0
 # ------------------------------
+
+
+# ------ Global functions ------
+async def msg_error_handler(msg: types.Message, flag_name: str, list_type=None) -> int:
+    global analyzing_channels_list
+
+    if list_type is None:
+        list_type = analyzing_channels_list
+
+    if msg.text == '/cancel':
+        await msg.answer('Отмена', reply_markup=types.ReplyKeyboardRemove())
+        exec(flag_name + ' = False')
+        return 1
+
+    if msg.text not in [el.title for el in list_type]:
+        await msg.answer('Канал не найден')
+        return 1
+
+    return 0
+
+
+async def get_channel_info_from_msg(msg: types.Message):
+    global analyzing_channels_list
+
+    index = [el.title for el in analyzing_channels_list].index(msg.text)
+    channel = analyzing_channels_list[index]
+    result = await client(GetFullChannelRequest(channel.id))
+
+    return result
+
+
+async def update_data():
+    global analyzing_channels_list
+    global client
+    analyzing_channels_list = await load_channels(client)
+    if analyzing_channels_list:
+        await bot.send_message(configs['OWNER_ID'], 'Начинаю обновление данных о постах...')
+        await messages_dump(client, analyzing_channels_list)
+        await bot.send_message(configs['OWNER_ID'], 'Обновление закончено')
+# ------------------------------
+
+
+# ------ Upload data about channels ------
+if client.is_user_authorized():
+    dp.loop.create_task(update_data())
+else:
+    dp.loop.create_task(
+        bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
+    dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Введите: /login'))
+# ----------------------------------------
+
 
 # ------ Flags ------
 phone_require = False
 code_require = False
 channel_name_require = False
 channel_name_for_analyze_require = False
+channel_name_for_get_posts_require = False
+channel_name_for_delete_require = False
+confirm_for_delete_require = False
 # -------------------
+
 
 # ------ Constants ------
 Done = '🟢'
@@ -27,6 +89,7 @@ _Warning = '🟡'
 Error = '🔴'
 Info = '🔵'
 # -----------------------
+
 
 # ------ Temp variables ------
 wait_for_secret_key = []
@@ -86,13 +149,15 @@ async def list_channels_handle(msg: types.Message):
         return
 
     text = []
+    await msg.answer('Обновляю список.\nПожалуйста подождите⏰')
     async for dialog in client.iter_dialogs():
         if dialog.is_channel:
+            dialog = dialog.entity
             if dialog.id not in [elem.id for elem in analyzing_channels_list]:
-                text.append(dialog.name + '\n' + Error + f'Не анализируется')
+                text.append(dialog.title + '\n' + Error + f'Не анализируется')
             else:
-                text.append(dialog.name + '\n' + Done + f'Анализируется')
-            if dialog not in channels_list:
+                text.append(dialog.title + '\n' + Done + f'Анализируется')
+            if dialog.id not in [elem.id for elem in channels_list]:
                 channels_list.append(dialog)
     await msg.answer('\n\n'.join(text))
     await msg.answer('Добавить к анализу:\n/add_to_analyze')
@@ -115,20 +180,24 @@ async def channel_handle(msg: types.Message):
     if len(channels_list) == 0:
         await msg.answer('Обновите список командой\n/update_list')
         return
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     items = [types.KeyboardButton('/cancel')]
-    temp_list = list(set(channels_list) - set(analyzing_channels_list))
-    items.extend([types.KeyboardButton(elem.name) for elem in temp_list])
+    temp_list = []
+    for channel in channels_list:
+        if channel.id not in [elem.id for elem in analyzing_channels_list]:
+            temp_list.append(channel)
+    items.extend([types.KeyboardButton(elem.title) for elem in temp_list])
     markup.add(*items)
     channel_name_require = True
     await msg.answer('Выберете канал', reply_markup=markup)
 
 
-@dp.message_handler(commands=['get_info'])
-async def get_info_handle(msg: types.Message):
+@dp.message_handler(commands=['remove_from_analyze'])
+async def remove_from_analyze_handle(msg: types.Message):
     global client
-    global channels_list
-    global channel_name_for_analyze_require
+    global analyzing_channels_list
+    global channel_name_for_delete_require
 
     if configs['OWNER_ID'] != msg.chat.id:
         await msg.answer('Доступ закрыт')
@@ -138,17 +207,17 @@ async def get_info_handle(msg: types.Message):
         await msg.answer('Не авторизован')
         return
 
-    await msg.answer('Просмотр данных')
-    if len(analyzing_channels_list) == 0:
-        await msg.answer('Список анализируемых каналов пустой')
-    else:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        items = [types.KeyboardButton('/cancel')]
-        items.extend(
-            [types.KeyboardButton(f'{channel.name}') for channel in analyzing_channels_list])
-        markup.add(*items)
-        await msg.answer('Выберете канал для получения информации', reply_markup=markup)
-        channel_name_for_analyze_require = True
+    if not analyzing_channels_list:
+        await msg.answer('Список анализируемых групп пуст')
+        return
+
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+    items = [types.KeyboardButton('/cancel')]
+    temp_list = analyzing_channels_list
+    items.extend([types.KeyboardButton(elem.title) for elem in temp_list])
+    markup.add(*items)
+    channel_name_for_delete_require = True
+    await msg.answer('Выберете канал', reply_markup=markup)
 
 
 @dp.message_handler(commands=['analyze_list'])
@@ -170,8 +239,64 @@ async def analyze_list_handle(msg: types.Message):
 
     text = []
     for channel in analyzing_channels_list:
-        text.append(Info + channel.name)
+        text.append(Info + channel.title)
     await msg.answer('\n\n'.join(text))
+
+
+@dp.message_handler(commands=['get_channel_info'])
+async def get_info_handle(msg: types.Message):
+    global client
+    global channels_list
+    global channel_name_for_analyze_require
+
+    if configs['OWNER_ID'] != msg.chat.id:
+        await msg.answer('Доступ закрыт')
+        return
+
+    if not await client.is_user_authorized():
+        await msg.answer('Не авторизован')
+        return
+
+    if len(analyzing_channels_list) == 0:
+        await msg.answer('Список анализируемых каналов пустой')
+        await msg.answer('Обновите список командой\n/update_list')
+        return
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        items = [types.KeyboardButton('/cancel')]
+        items.extend(
+            [types.KeyboardButton(f'{channel.title}') for channel in analyzing_channels_list])
+        markup.add(*items)
+        await msg.answer('Выберете канал для получения информации', reply_markup=markup)
+        channel_name_for_analyze_require = True
+
+
+@dp.message_handler(commands=['get_posts_info'])
+async def get_posts_handle(msg: types.Message):
+    global client
+    global channels_list
+    global channel_name_for_get_posts_require
+
+    if configs['OWNER_ID'] != msg.chat.id:
+        await msg.answer('Доступ закрыт')
+        return
+
+    if not await client.is_user_authorized():
+        await msg.answer('Не авторизован')
+        return
+
+    if len(analyzing_channels_list) == 0:
+        await msg.answer('Список анализируемых каналов пустой')
+        await msg.answer('Обновите список командой\n/update_list')
+        return
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+        items = [types.KeyboardButton('/cancel')]
+        items.extend(
+            [types.KeyboardButton(f'{channel.title}') for channel in analyzing_channels_list])
+        markup.add(*items)
+        await msg.answer('Выберете канал для получения постов', reply_markup=markup)
+        channel_name_for_get_posts_require = True
 
 
 @dp.message_handler(content_types=['text'])
@@ -185,6 +310,10 @@ async def text_handle(msg: types.Message):
     global client
     global channel_name_require
     global channel_name_for_analyze_require
+    global channel_name_for_get_posts_require
+    global confirm_for_delete_require
+    global channel_id_for_delete
+    global channel_name_for_delete_require
 
     if msg.chat.id not in wait_for_secret_key:
         # Если ключ разработчика не требуется
@@ -231,27 +360,67 @@ async def text_handle(msg: types.Message):
                                 code_require = False
                                 await msg.answer('Авторизация прошла успешно')
                 elif channel_name_require:
-                    if msg.text == '/cancel':
-                        await msg.answer('Отмена', reply_markup=types.ReplyKeyboardRemove())
-                        channel_name_require = False
+                    res = await msg_error_handler(msg, 'channel_name_require', channels_list)
+                    print(res)
+                    if res:
                         return
-                    index = [el.name for el in channels_list].index(msg.text)
+
+                    if msg.text in [el.title for el in analyzing_channels_list]:
+                        await msg.answer('Канал уже анализируется')
+
+                    index = [el.title for el in channels_list].index(msg.text)
                     analyzing_channels_list.append(channels_list[index])
+                    result = await client(GetFullChannelRequest(channels_list[index].id))
+
+                    do_record(result)
                     await msg.answer(f'Добавлен канал: {msg.text}',
                                      reply_markup=types.ReplyKeyboardRemove())
                     channel_name_require = False
                 elif channel_name_for_analyze_require:
-                    if msg.text == '/cancel':
-                        await msg.answer('Отмена', reply_markup=types.ReplyKeyboardRemove())
-                        channel_name_for_analyze_require = False
+                    res = await msg_error_handler(msg, 'channel_name_for_analyze_require')
+                    if res:
                         return
-                    index = [el.name for el in analyzing_channels_list].index(msg.text)
-                    channel = analyzing_channels_list[index]
 
-                    res = await client(GetFullChannelRequest(channel.id))
-                    await msg.answer(f'Инфо о {channel.name} канал:\n{res.stringify()}',
+                    result = await get_channel_info_from_msg(msg)
+
+                    text = get_current_info(result)
+                    await msg.answer(f'Информация о "{result.chats[0].title}":\n{text}',
                                      reply_markup=types.ReplyKeyboardRemove())
                     channel_name_for_analyze_require = False
+                elif channel_name_for_delete_require:
+                    res = await msg_error_handler(msg, 'channel_name_for_delete_require')
+                    if res:
+                        return
+
+                    result = await get_channel_info_from_msg(msg)
+                    type(result)
+
+                    text = get_current_info(result)
+                    await msg.answer(f'Информация о "{result.chats[0].title}":\n{text}',
+                                     reply_markup=types.ReplyKeyboardRemove())
+
+                    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2, one_time_keyboard=True)
+                    items = [
+                        types.KeyboardButton('Да'),
+                        types.KeyboardButton('Нет')
+                    ]
+                    markup.add(*items)
+
+                    await msg.answer('Вы точно хотите удалить все данные связанные с этим каналом?',
+                                     reply_markup=markup)
+
+                    channel_name_for_delete_require = False
+                    confirm_for_delete_require = True
+                    channel_id_for_delete = result.full_chat.id
+                elif confirm_for_delete_require:
+                    if msg.text.lower() == 'да':
+                        await msg.answer(f'Начинаю удаление канала (id={channel_id_for_delete})',
+                                         reply_markup=types.ReplyKeyboardRemove())
+                        # Здесь происходит удаление всех данных из БД
+                        await msg.answer(f'Данные удалены')
+                    else:
+                        await msg.answer('Отмена', reply_markup=types.ReplyKeyboardRemove())
+
     else:
         if configs['OWNER_ID'] is None:
             if configs['SECRET_KEY'] == msg.text:
