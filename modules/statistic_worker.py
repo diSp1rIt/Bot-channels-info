@@ -2,7 +2,7 @@ from data import db_session
 from data.channels import *
 from telethon.tl import patched
 
-db_session.global_init('data_history.db')
+db_session.global_init('../data_history.db')
 db_ses = db_session.create_session()
 
 data_list = [

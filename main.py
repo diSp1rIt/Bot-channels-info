@@ -1,9 +1,9 @@
 from aiogram import Bot, types, Dispatcher, executor
 from cfg_loader import *
-import registration
-from handle_phone_number import check_phone_number
+from modules import registration
+from modules.handle_phone_number import check_phone_number
 from telethon.tl.functions.channels import GetFullChannelRequest
-from statistic_worker import *
+from modules.statistic_worker import *
 
 
 # ------ Init ------
