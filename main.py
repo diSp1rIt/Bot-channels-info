@@ -6,6 +6,7 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from modules.statistic_worker import *
 from asyncio import sleep
 from datetime import datetime
+from os import system
 
 # ------ Init ------
 configs = load_configs()
@@ -101,9 +102,12 @@ async def scheduled_actions():
             current_month += 1
             current_month %= 12
 
-        await update_data()
+        try:
+            await update_data()
+        except:
+            pass
 
-        await sleep(12 * 60 * 60)
+        await sleep(12 * 60 * 60)  # delay 2 min
 # ------------------------------
 
 
@@ -111,8 +115,9 @@ async def scheduled_actions():
 if client.is_user_authorized():
     dp.loop.create_task(scheduled_actions())
 else:
-    dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
-    dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Введите: /login'))
+    if configs['OWNER_ID'] is not None:
+        dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
+        dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Введите: /login'))
 # ----------------------------------------
 
 
@@ -421,6 +426,9 @@ async def text_handle(msg: types.Message):
                                 dp.loop.create_task(scheduled_actions())
 
                                 await msg.answer('Авторизация прошла успешно')
+                                system('python rebooter.py')
+                                exit()
+
                 elif channel_name_require:
                     res = await msg_error_handler(msg, 'channel_name_require', channels_list)
                     print(res)
