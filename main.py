@@ -356,7 +356,7 @@ async def get_db_handle(msg: types.Message):
         await msg.answer('Не авторизован')
         return
 
-    await bot.send_document(msg.chat.id, types.InputFile(f'data_history({current_month}.{datetime.now().year}).db'))
+    await bot.send_document(msg.chat.id, types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
 
 
 @dp.message_handler(content_types=['text'])
