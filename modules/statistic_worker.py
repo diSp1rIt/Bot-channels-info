@@ -1,8 +1,9 @@
 from data import db_session
 from data.channels import *
 from telethon.tl import patched
+from datetime import datetime
 
-db_session.global_init('data_history.db')
+db_session.global_init(f'data_history({datetime.now().month}.{datetime.now().year}).db')
 db_ses = db_session.create_session()
 
 data_list = [

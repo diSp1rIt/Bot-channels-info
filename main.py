@@ -4,6 +4,9 @@ from modules import registration
 from modules.handle_phone_number import check_phone_number
 from telethon.tl.functions.channels import GetFullChannelRequest
 from modules.statistic_worker import *
+from os import remove
+from asyncio import sleep
+from datetime import datetime
 
 
 # ------ Init ------
@@ -18,6 +21,7 @@ client = registration.get_client()
 channels_list = []
 analyzing_channels_list = []
 channel_id_for_delete = 0
+current_month = datetime.now().month
 # ------------------------------
 
 
@@ -68,15 +72,43 @@ async def update_data():
             res = await client(GetFullChannelRequest(channel.id))
             await do_record(res)
         await bot.send_message(configs['OWNER_ID'], 'Обновление закончено')
+    return
+
+
+async def wipe_db():
+    global db_ses
+    await bot.send_message(configs['OWNER_ID'], _Warning + 'Начинаю очистку данных о постах...\nПожалуйста подождите⏰')
+    db_ses.close()
+    if current_month == 12:
+        await bot.send_document(configs['OWNER_ID'], f'data_history({current_month}.{datetime.now().year - 1}).db')
+        remove(f'data_history({current_month}.{datetime.now().year - 1}).db')
+    else:
+        await bot.send_document(configs['OWNER_ID'], f'data_history({current_month}.{datetime.now().year}).db')
+        remove(f'data_history({current_month}.{datetime.now().year}).db')
+    db_session.global_init(f'data_history({(current_month + 1) % 12}.{datetime.now().year}).db')
+    db_ses = db_session.create_session()
+    await bot.send_message(configs['OWNER_ID'], 'Очистка закончена')
+
+
+async def scheduled_actions():
+    global current_month
+    while True:
+        await update_data()
+
+        if datetime.now().month == (current_month + 1) % 12:
+            await wipe_db()
+            current_month += 1
+            current_month %= 12
+
+        await sleep(12 * 60 * 60)
 # ------------------------------
 
 
 # ------ Upload data about channels ------
 if client.is_user_authorized():
-    dp.loop.create_task(update_data())
+    dp.loop.create_task(scheduled_actions())
 else:
-    dp.loop.create_task(
-        bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
+    dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
     dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Введите: /login'))
 # ----------------------------------------
 
@@ -308,6 +340,21 @@ async def get_posts_handle(msg: types.Message):
         channel_name_for_get_posts_require = True
 
 
+@dp.message_handler(commands=['get_database'])
+async def get_db_handle(msg: types.Message):
+    global client
+
+    if configs['OWNER_ID'] != msg.chat.id:
+        await msg.answer('Доступ закрыт')
+        return
+
+    if not await client.is_user_authorized():
+        await msg.answer('Не авторизован')
+        return
+
+    await bot.send_document(msg.chat.id, types.InputFile(f'data_history({current_month}.{datetime.now().year}).db'))
+
+
 @dp.message_handler(content_types=['text'])
 async def text_handle(msg: types.Message):
     global wait_for_secret_key
@@ -367,6 +414,9 @@ async def text_handle(msg: types.Message):
                             else:
                                 client = registration.get_client()
                                 code_require = False
+
+                                dp.loop.create_task(scheduled_actions())
+
                                 await msg.answer('Авторизация прошла успешно')
                 elif channel_name_require:
                     res = await msg_error_handler(msg, 'channel_name_require', channels_list)
