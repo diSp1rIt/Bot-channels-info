@@ -8,7 +8,6 @@ from os import remove
 from asyncio import sleep
 from datetime import datetime
 
-
 # ------ Init ------
 configs = load_configs()
 # ------------------
@@ -22,6 +21,8 @@ channels_list = []
 analyzing_channels_list = []
 channel_id_for_delete = 0
 current_month = datetime.now().month
+
+
 # ------------------------------
 
 
@@ -80,10 +81,12 @@ async def wipe_db():
     await bot.send_message(configs['OWNER_ID'], _Warning + 'Начинаю очистку данных о постах...\nПожалуйста подождите⏰')
     db_ses.close()
     if current_month == 12:
-        await bot.send_document(configs['OWNER_ID'], f'data_history({current_month}.{datetime.now().year - 1}).db')
+        await bot.send_document(configs['OWNER_ID'],
+                                types.InputFile(f'data_history({current_month}.{datetime.now().year - 1}).db'))
         remove(f'data_history({current_month}.{datetime.now().year - 1}).db')
     else:
-        await bot.send_document(configs['OWNER_ID'], f'data_history({current_month}.{datetime.now().year}).db')
+        await bot.send_document(configs['OWNER_ID'],
+                                types.InputFile(f'data_history({current_month}.{datetime.now().year}).db'))
         remove(f'data_history({current_month}.{datetime.now().year}).db')
     db_session.global_init(f'data_history({(current_month + 1) % 12}.{datetime.now().year}).db')
     db_ses = db_session.create_session()
@@ -101,6 +104,8 @@ async def scheduled_actions():
             current_month %= 12
 
         await sleep(12 * 60 * 60)
+
+
 # ------------------------------
 
 
@@ -136,6 +141,8 @@ Info = '🔵'
 wait_for_secret_key = []
 phone = ''
 code = 0
+
+
 # ----------------------------
 
 
