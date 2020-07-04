@@ -3,7 +3,7 @@ from data.channels import *
 from telethon.tl import patched
 from datetime import datetime
 
-db_session.global_init(f'data_history({datetime.now().month}.{datetime.now().year}).db')
+db_session.global_init('msgs_database.db')
 db_ses = db_session.create_session()
 
 data_list = [

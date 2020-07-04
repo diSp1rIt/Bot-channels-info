@@ -21,8 +21,7 @@ channels_list = []
 analyzing_channels_list = []
 channel_id_for_delete = 0
 current_month = datetime.now().month
-
-
+current_year = datetime.now().year
 # ------------------------------
 
 
@@ -78,34 +77,34 @@ async def update_data():
 
 async def wipe_db():
     global db_ses
+    global db_session
+    global analyzing_channels_list
+
     await bot.send_message(configs['OWNER_ID'], _Warning + 'Начинаю очистку данных о постах...\nПожалуйста подождите⏰')
-    db_ses.close()
-    if current_month == 12:
-        await bot.send_document(configs['OWNER_ID'],
-                                types.InputFile(f'data_history({current_month}.{datetime.now().year - 1}).db'))
-        remove(f'data_history({current_month}.{datetime.now().year - 1}).db')
-    else:
-        await bot.send_document(configs['OWNER_ID'],
-                                types.InputFile(f'data_history({current_month}.{datetime.now().year}).db'))
-        remove(f'data_history({current_month}.{datetime.now().year}).db')
-    db_session.global_init(f'data_history({(current_month + 1) % 12}.{datetime.now().year}).db')
-    db_ses = db_session.create_session()
+    await bot.send_document(configs['OWNER_ID'], types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
+
+    for channel in analyzing_channels_list:
+        await delete_data(channel.id, delete_from_posts=True)
+
     await bot.send_message(configs['OWNER_ID'], 'Очистка закончена')
 
 
 async def scheduled_actions():
     global current_month
+    global current_year
+
     while True:
-        await update_data()
 
         if datetime.now().month == (current_month + 1) % 12:
             await wipe_db()
+            if current_month == 12:
+                current_year += 1
             current_month += 1
             current_month %= 12
 
-        await sleep(12 * 60 * 60)
+        await update_data()
 
-
+        await sleep(5 * 60)
 # ------------------------------
 
 
@@ -141,8 +140,6 @@ Info = '🔵'
 wait_for_secret_key = []
 phone = ''
 code = 0
-
-
 # ----------------------------
 
 
