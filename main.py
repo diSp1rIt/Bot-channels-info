@@ -4,7 +4,6 @@ from modules import registration
 from modules.handle_phone_number import check_phone_number
 from telethon.tl.functions.channels import GetFullChannelRequest
 from modules.statistic_worker import *
-from os import remove
 from asyncio import sleep
 from datetime import datetime
 
@@ -104,7 +103,7 @@ async def scheduled_actions():
 
         await update_data()
 
-        await sleep(5 * 60)
+        await sleep(12 * 60 * 60)
 # ------------------------------
 
 
