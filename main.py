@@ -6,7 +6,6 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from modules.statistic_worker import *
 from asyncio import sleep
 from datetime import datetime
-from os import system
 
 # ------ Init ------
 configs = load_configs()
@@ -107,7 +106,7 @@ async def scheduled_actions():
         except:
             pass
 
-        await sleep(12 * 60 * 60)  # delay 2 min
+        await sleep(2 * 60)  # delay 2 min
 # ------------------------------
 
 
@@ -420,14 +419,13 @@ async def text_handle(msg: types.Message):
                                 await msg.answer('Телеграм не принимает код')
                                 print(error)
                             else:
+                                del client
                                 client = registration.get_client()
                                 code_require = False
 
                                 dp.loop.create_task(scheduled_actions())
 
                                 await msg.answer('Авторизация прошла успешно')
-                                system('python rebooter.py')
-                                exit()
 
                 elif channel_name_require:
                     res = await msg_error_handler(msg, 'channel_name_require', channels_list)
