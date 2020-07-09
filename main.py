@@ -64,7 +64,7 @@ async def update_data():
     global client
     analyzing_channels_list = await load_channels(client)
     if analyzing_channels_list:
-        await bot.send_message(configs['OWNER_ID'], Done + '\n\nОбновление\nПожалуйста подождите⏰')
+        await bot.send_message(configs['OWNER_ID'], Done + 'Обновление\nПожалуйста подождите⏰')
         await messages_dump(client, analyzing_channels_list)
         for channel in analyzing_channels_list:
             await delete_data(channel.id, delete_from_channels=True)
@@ -79,7 +79,7 @@ async def wipe_db():
     global db_session
     global analyzing_channels_list
 
-    await bot.send_message(configs['OWNER_ID'], _Warning + '\n\nСоздание дампа\nПожалуйста подождите⏰')
+    await bot.send_message(configs['OWNER_ID'], _Warning + 'Создание дампа\nПожалуйста подождите⏰')
     await bot.send_document(configs['OWNER_ID'], types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
 
     for channel in analyzing_channels_list:
