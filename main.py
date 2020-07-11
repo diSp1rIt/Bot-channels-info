@@ -95,12 +95,12 @@ async def scheduled_actions():
 
     while True:
 
-        if datetime.now().month == (current_month + 1) % 12:
+        if datetime.now().month == (current_month % 12) + 1:
             await wipe_db()
             if current_month == 12:
                 current_year += 1
-            current_month += 1
             current_month %= 12
+            current_month += 1
 
         try:
             await update_data()
