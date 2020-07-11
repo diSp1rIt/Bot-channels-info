@@ -1,7 +1,6 @@
 from data import db_session
 from data.channels import *
 from telethon.tl import patched
-from datetime import datetime
 
 db_session.global_init('msgs_database.db')
 db_ses = db_session.create_session()
@@ -82,6 +81,7 @@ async def messages_dump(client, analyze_list):
                     new_post.channel_id = msg.to_id.channel_id
                     new_post.message = msg.message.lower()
                     new_post.views = msg.views
+                    new_post.post_date = msg.date
                     db_ses.add(new_post)
     db_ses.commit()
 

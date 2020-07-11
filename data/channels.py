@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column
-from sqlalchemy import Integer, String, DateTime, Boolean, Float
+from sqlalchemy import Integer, String, DateTime
 from .db_session import SqlAlchemyBase
 
 
@@ -23,5 +23,6 @@ class Post(SqlAlchemyBase):
     channel_id = Column(Integer, index=True)
     message = Column(String, default='')
     views = Column(Integer)
+    post_date = Column(DateTime)
     record_date = Column(DateTime, default=datetime.now)
 

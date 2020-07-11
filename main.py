@@ -62,6 +62,7 @@ async def get_channel_info_from_msg(msg: types.Message):
 async def update_data():
     global analyzing_channels_list
     global client
+
     analyzing_channels_list = await load_channels(client)
     if analyzing_channels_list:
         await bot.send_message(configs['OWNER_ID'], Done + 'Обновление\nПожалуйста подождите⏰')
@@ -106,7 +107,7 @@ async def scheduled_actions():
         except:
             pass
 
-        await sleep(2 * 60)  # delay 2 min
+        await sleep(12 * 60 * 60)  # delay 2 min
 # ------------------------------
 
 
@@ -434,7 +435,7 @@ async def text_handle(msg: types.Message):
                         return
 
                     try:
-                        id = int(msg.text.split('(')[1].strip(')'))
+                        id = int(msg.text.split('(')[-1].strip(')'))
                     except Exception:
                         await msg.answer('Ошибка формата.\nИспользуйте кнопки')
                         return
