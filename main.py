@@ -21,6 +21,7 @@ analyzing_channels_list = []
 channel_id_for_delete = 0
 current_month = datetime.now().month
 current_year = datetime.now().year
+delta_month = 0
 # ------------------------------
 
 
@@ -66,7 +67,23 @@ async def update_data():
     analyzing_channels_list = await load_channels(client)
     if analyzing_channels_list:
         await bot.send_message(configs['OWNER_ID'], Done + 'Обновление\nПожалуйста подождите⏰')
-        await messages_dump(client, analyzing_channels_list)
+
+        including_range = dict()
+        month = current_month - delta_month
+        year = current_year
+
+        while month < 0:
+            year -= 1
+            month += 12
+            if month < 0:
+                including_range[year] = list(range(1, 13))
+            else:
+                including_range[year] = list(range(month, 13))
+                month = 1
+
+        including_range[current_year] = list(range(month, current_month + 1))
+
+        await messages_dump(client, analyzing_channels_list, including_range)
         for channel in analyzing_channels_list:
             await delete_data(channel.id, delete_from_channels=True)
             res = await client(GetFullChannelRequest(channel.id))

@@ -70,19 +70,21 @@ async def load_channels(client):
     return analyze_list
 
 
-async def messages_dump(client, analyze_list):
+async def messages_dump(client, analyze_list, including_range: dict):
     for channel in analyze_list:
         async for msg in client.iter_messages(channel.id):
             if type(msg) is patched.Message:
                 msg: patched.Message
                 if msg.message != '':
-                    new_post = Post()
-                    new_post.message_id = msg.id
-                    new_post.channel_id = msg.to_id.channel_id
-                    new_post.message = msg.message.lower()
-                    new_post.views = msg.views
-                    new_post.post_date = msg.date
-                    db_ses.add(new_post)
+                    if msg.date.year in including_range.keys():
+                        if msg.date.month in including_range[msg.date.year]:
+                            new_post = Post()
+                            new_post.message_id = msg.id
+                            new_post.channel_id = msg.to_id.channel_id
+                            new_post.message = msg.message.lower()
+                            new_post.views = msg.views
+                            new_post.post_date = msg.date
+                            db_ses.add(new_post)
     db_ses.commit()
 
 
