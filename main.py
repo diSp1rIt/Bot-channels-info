@@ -6,6 +6,8 @@ from telethon.tl.functions.channels import GetFullChannelRequest
 from modules.statistic_worker import *
 from asyncio import sleep
 from datetime import datetime
+from os.path import getsize
+from shutil import copyfile
 
 # ------ Init ------
 configs = load_configs()
@@ -130,7 +132,8 @@ async def scheduled_actions():
 
 # ------ Upload data about channels ------
 if client.is_user_authorized():
-    dp.loop.create_task(scheduled_actions())
+    # dp.loop.create_task(scheduled_actions())
+    pass
 else:
     if configs['OWNER_ID'] is not None:
         dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
@@ -143,7 +146,6 @@ phone_require = False
 code_require = False
 channel_name_require = False
 channel_name_for_analyze_require = False
-channel_name_for_get_posts_require = False
 channel_name_for_delete_require = False
 confirm_for_delete_require = False
 # -------------------
@@ -337,34 +339,6 @@ async def get_info_handle(msg: types.Message):
         channel_name_for_analyze_require = True
 
 
-@dp.message_handler(commands=['get_posts_info'])
-async def get_posts_handle(msg: types.Message):
-    global client
-    global channels_list
-    global channel_name_for_get_posts_require
-
-    if configs['OWNER_ID'] != msg.chat.id:
-        await msg.answer('Доступ закрыт')
-        return
-
-    if not await client.is_user_authorized():
-        await msg.answer('Не авторизован')
-        return
-
-    if len(analyzing_channels_list) == 0:
-        await msg.answer('Список анализируемых каналов пустой')
-        await msg.answer('Обновите список командой\n/update_list')
-        return
-    else:
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        items = [types.KeyboardButton('/cancel')]
-        items.extend(
-            [types.KeyboardButton(channel.title + f'\n({channel.id})') for channel in analyzing_channels_list])
-        markup.add(*items)
-        await msg.answer('Выберете канал для получения постов', reply_markup=markup)
-        channel_name_for_get_posts_require = True
-
-
 @dp.message_handler(commands=['get_database'])
 async def get_db_handle(msg: types.Message):
     global client
@@ -377,7 +351,11 @@ async def get_db_handle(msg: types.Message):
         await msg.answer('Не авторизован')
         return
 
-    await bot.send_document(msg.chat.id, types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
+    if getsize('msgs_database.db') / 1000 / 1000 >= 50:
+        copyfile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db')
+        await msg.answer('База имеет слишком большой объём для отправки')
+    else:
+        await bot.send_document(msg.chat.id, types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
 
 
 @dp.message_handler(content_types=['text'])
@@ -391,7 +369,6 @@ async def text_handle(msg: types.Message):
     global client
     global channel_name_require
     global channel_name_for_analyze_require
-    global channel_name_for_get_posts_require
     global confirm_for_delete_require
     global channel_id_for_delete
     global channel_name_for_delete_require
@@ -444,7 +421,6 @@ async def text_handle(msg: types.Message):
                                 dp.loop.create_task(scheduled_actions())
 
                                 await msg.answer('Авторизация прошла успешно')
-
                 elif channel_name_require:
                     res = await msg_error_handler(msg, 'channel_name_require', channels_list)
                     print(res)
