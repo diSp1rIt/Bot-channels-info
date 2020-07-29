@@ -9,15 +9,14 @@ parser.add_argument('secret_key', type=str, metavar='SECRET_KEY', help='Secret k
 
 args = parser.parse_args()
 
-system('pip install -r requirements.txt')
 
 with open('pre_cfg.py', 'w') as f:
     lines = [
-        f'TOKEN = \'{args.token}\'',
-        f'API_ID = {args.api_id}',
-        f'API_HASH = \'{args.api_hash}\'',
-        f'SECRET_KEY = \'{args.secret_key}\''
+        f'TOKEN = \'{args.token}\'\n',
+        f'API_ID = {args.api_id}\n',
+        f'API_HASH = \'{args.api_hash}\'\n',
+        f'SECRET_KEY = \'{args.secret_key}\'\n'
     ]
-    f.writelines(*lines)
+    f.writelines(lines)
 
 print('Installed')

@@ -107,7 +107,7 @@ async def scheduled_actions():
         except:
             pass
 
-        await sleep(12 * 60 * 60)  # delay 2 min
+        await sleep(12 * 60 * 60)  # delay 12 hours
 # ------------------------------
 
 
