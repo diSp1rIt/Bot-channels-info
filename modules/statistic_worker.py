@@ -1,6 +1,7 @@
 from data import db_session
 from data.channels import *
 from telethon.tl import patched
+from tqdm import tqdm
 
 db_session.global_init('msgs_database.db')
 db_ses = db_session.create_session()
@@ -71,7 +72,7 @@ async def load_channels(client):
 
 
 async def messages_dump(client, analyze_list, including_range: dict):
-    for channel in analyze_list:
+    for channel in tqdm(analyze_list):
         async for msg in client.iter_messages(channel.id):
             if type(msg) is patched.Message:
                 msg: patched.Message

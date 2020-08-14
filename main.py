@@ -100,7 +100,11 @@ async def wipe_db():
     global analyzing_channels_list
 
     await bot.send_message(configs['OWNER_ID'], _Warning + 'Создание дампа\nПожалуйста подождите⏰')
-    await bot.send_document(configs['OWNER_ID'], types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
+    if getsize('msgs_database.db') / 1000 / 1000 >= 50:
+        copyfile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db')
+        await bot.send_message(configs['OWNER_ID'], 'База имеет слишком большой объём для отправки')
+    else:
+        await bot.send_document(configs['OWNER_ID'], types.InputFile('msgs_database.db', f'msg_dump_{current_month}.{current_year}.db'))
 
     for channel in analyzing_channels_list:
         await delete_data(channel.id, delete_from_posts=True)
@@ -132,8 +136,7 @@ async def scheduled_actions():
 
 # ------ Upload data about channels ------
 if client.is_user_authorized():
-    # dp.loop.create_task(scheduled_actions())
-    pass
+    dp.loop.create_task(scheduled_actions())
 else:
     if configs['OWNER_ID'] is not None:
         dp.loop.create_task(bot.send_message(configs['OWNER_ID'], 'Требуется заного пройти регистрацию'))
